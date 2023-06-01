@@ -1,32 +1,9 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using Api;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.Configure<JwtBearerOptions>(builder.Configuration.GetSection("JwtBearer"));
-builder.Services
-       .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-       .AddJwtBearer();
-
-builder.Services.AddAuthorization(options =>
-{
-    options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
-                            .RequireAuthenticatedUser()
-                            .Build();
-});
+builder.Services.AddApiServices(builder.Configuration);
 
 var app = builder.Build();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapGet("/people", () => new[]
-{
-    new Person("John", "Doe"),
-    new Person("Jane", "Doe"),
-    new Person("John", "Smith"),
-    new Person("Jane", "Smith")
-}).RequireAuthorization();
+app.ConfigureApp();
 
 app.Run();
-
-record Person(string FirstName, string LastName);
