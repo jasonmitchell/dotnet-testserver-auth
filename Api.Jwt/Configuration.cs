@@ -1,12 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Api;
+namespace Api.Jwt;
 
 public static class Configuration
 {
-    public static void AddApiServices(this IServiceCollection services, IConfiguration configuration)
+    public static void AddJwtApiServices(this IServiceCollection services, IConfiguration configuration)
     {
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
         
@@ -17,14 +18,16 @@ public static class Configuration
         services.AddAuthorization(options =>
         {
             options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
-                                    .RequireAuthenticatedUser()
-                                    .Build();
-            
-            options.AddPolicy("Admin", policy => policy.RequireClaim("role", "admin"));
+                .RequireAuthenticatedUser()
+                .Build();
+
+            options.AddPolicy("Admin",
+                policy => policy.RequireClaim("role", "admin"));
+
         });
     }
 
-    public static void ConfigureApp(this WebApplication app)
+    public static void ConfigureJwtApp(this WebApplication app)
     {
         app.UseAuthentication();
         app.UseAuthorization();

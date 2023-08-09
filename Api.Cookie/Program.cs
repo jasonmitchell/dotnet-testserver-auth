@@ -1,9 +1,9 @@
-using Api;
+using Api.Cookie;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddApiServices(builder.Configuration);
+builder.Services.AddCookieApiServices();
 
 var app = builder.Build();
-app.ConfigureApp();
+app.ConfigureCookieApp();
 
 app.Run();
