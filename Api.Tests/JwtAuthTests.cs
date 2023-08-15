@@ -6,6 +6,8 @@ using System.Security.Cryptography;
 using Api.Jwt;
 using Api.Tests.Sdk;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -47,6 +49,40 @@ public class JwtAuthTests
         });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task Endpoints_require_authorization()
+    {
+        var publicRoutes = new []
+        {
+            "/health"
+        };
+
+        var server = await HttpTestServerFixture.CreateTestServer(
+            (services, config) => services.AddJwtApiServices(config),
+            app => app.ConfigureJwtApp());
+        
+        var endpointDataSources = server.Services.GetServices<EndpointDataSource>();
+        var endpoints = endpointDataSources.SelectMany(x => x.Endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var routeEndpoint = (RouteEndpoint)endpoint;
+            var route = routeEndpoint.RoutePattern.RawText!;
+            var authorizeAttribute = routeEndpoint.Metadata.OfType<AuthorizeAttribute>().FirstOrDefault();
+
+            if (publicRoutes.Contains(route.ToLowerInvariant()))
+            {
+                // Route is expected to be public
+                Assert.Null(authorizeAttribute);
+            }
+            else
+            {
+                // Route is expected to require authorization
+                Assert.NotNull(authorizeAttribute);
+            }
+        }
     }
 
     private static async Task<HttpClient> CreateTestClient()

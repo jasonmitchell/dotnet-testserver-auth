@@ -8,7 +8,7 @@ namespace Api.Tests.Sdk;
 
 internal static class HttpTestServerFixture
 {
-    public static async Task<HttpClient> CreateTestClient(Action<IServiceCollection, IConfiguration>? configureServices = null,
+    public static async Task<TestServer> CreateTestServer(Action<IServiceCollection, IConfiguration>? configureServices = null,
         Action<WebApplication>? configureApp = null)
     {
         var builder = WebApplication.CreateBuilder();
@@ -21,6 +21,13 @@ internal static class HttpTestServerFixture
         await app.StartAsync();
 
         var testServer = (TestServer)app.Services.GetRequiredService<IServer>();
+        return testServer;
+    }
+    
+    public static async Task<HttpClient> CreateTestClient(Action<IServiceCollection, IConfiguration>? configureServices = null,
+        Action<WebApplication>? configureApp = null)
+    {
+        var testServer = await CreateTestServer(configureServices, configureApp);
         var httpClient = testServer.CreateClient();
         return httpClient;
     }

@@ -39,5 +39,7 @@ public static class Configuration
             new Person("John", "Smith"),
             new Person("Jane", "Smith")
         }).RequireAuthorization("Admin");
+        
+        app.MapGet("/health", () => "Healthy");
     }
 }

@@ -4,6 +4,8 @@ using Api.Cookie;
 using Api.Tests.Sdk;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -24,6 +26,53 @@ public class CookieAuthTests
         
         var response = await httpClient.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task Authorization_policy_is_applied_with_test_token()
+    {
+        var httpClient = await CreateTestClient();
+        var cookie = CreateCookie("dev");
+        
+        var request = new HttpRequestMessage(HttpMethod.Get, "/people");
+        request.Headers.Add("cookie", cookie.ToString());
+
+        var response = await httpClient.SendAsync(request);
+        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task Endpoints_require_authorization()
+    {
+        var publicRoutes = new []
+        {
+            "/health"
+        };
+
+        var server = await HttpTestServerFixture.CreateTestServer(
+            (services, _) => services.AddCookieApiServices(),
+            app => app.ConfigureCookieApp());
+        
+        var endpointDataSources = server.Services.GetServices<EndpointDataSource>();
+        var endpoints = endpointDataSources.SelectMany(x => x.Endpoints);
+
+        foreach (var endpoint in endpoints)
+        {
+            var routeEndpoint = (RouteEndpoint)endpoint;
+            var route = routeEndpoint.RoutePattern.RawText!;
+            var authorizeAttribute = routeEndpoint.Metadata.OfType<AuthorizeAttribute>().FirstOrDefault();
+
+            if (publicRoutes.Contains(route.ToLowerInvariant()))
+            {
+                // Route is expected to be public
+                Assert.Null(authorizeAttribute);
+            }
+            else
+            {
+                // Route is expected to require authorization
+                Assert.NotNull(authorizeAttribute);
+            }
+        }
     }
     
     private static async Task<HttpClient> CreateTestClient()
